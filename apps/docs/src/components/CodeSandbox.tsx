@@ -40,11 +40,19 @@ function getSolidInfraFiles(): SandpackFiles {
       hidden: true,
     },
     '/index.ts': {
-      code: 'import "./styles.css";\nimport {render} from "solid-js/web";\nimport App from "./App";\n\nrender(App, document.getElementById("app"));',
+      code: 'import "./styles.css";\nimport {render} from "@solidjs/web";\nimport App from "./App";\n\nrender(App, document.getElementById("app")!);',
       hidden: true,
     },
     '/.babelrc': {
-      code: JSON.stringify({ presets: ['babel-preset-solid'] }, null, 2),
+      code: JSON.stringify(
+        {
+          presets: [
+            ['babel-preset-solid', {moduleName: '@solidjs/web'}],
+          ],
+        },
+        null,
+        2,
+      ),
       hidden: true,
     },
     '/tsconfig.json': {
@@ -52,7 +60,7 @@ function getSolidInfraFiles(): SandpackFiles {
         {
           compilerOptions: {
             jsx: 'preserve',
-            jsxImportSource: 'solid-js',
+            jsxImportSource: '@solidjs/web',
             noEmit: true,
           },
         },
@@ -159,7 +167,8 @@ export function CodeSandbox({
   let files = { ...inputFiles };
 
   if (isSolid) {
-    dependencies['solid-js'] = '^1.9.0';
+    dependencies['solid-js'] = '2.0.0-beta.14';
+    dependencies['@solidjs/web'] = '2.0.0-beta.14';
     dependencies['babel-preset-solid'] = 'latest';
     files = { ...getSolidInfraFiles(), ...files };
   }

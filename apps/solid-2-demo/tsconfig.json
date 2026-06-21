@@ -1,0 +1,11 @@
+{
+  "extends": "../../config/typescript/solid.json",
+  "compilerOptions": {
+    "jsxImportSource": "@solidjs/web",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

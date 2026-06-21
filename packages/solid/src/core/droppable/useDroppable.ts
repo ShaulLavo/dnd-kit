@@ -31,23 +31,33 @@ export function useDroppable<T extends Data = Data>(
     input.element
   );
 
-  createEffect(() => {
-    const el = element();
-    if (el) droppable.element = el;
+  createEffect(
+    () => ({
+      accept: input.accept,
+      collisionDetector: input.collisionDetector,
+      data: input.data,
+      disabled: input.disabled ?? false,
+      element: element(),
+      id: input.id,
+      type: input.type,
+    }),
+    (options) => {
+      if (options.element) droppable.element = options.element;
 
-    droppable.id = input.id;
-    droppable.accept = input.accept;
-    droppable.type = input.type;
-    droppable.disabled = input.disabled ?? false;
+      droppable.id = options.id;
+      droppable.accept = options.accept;
+      droppable.type = options.type;
+      droppable.disabled = options.disabled;
 
-    if (input.collisionDetector) {
-      droppable.collisionDetector = input.collisionDetector;
+      if (options.collisionDetector) {
+        droppable.collisionDetector = options.collisionDetector;
+      }
+
+      if (options.data) {
+        droppable.data = options.data;
+      }
     }
-
-    if (input.data) {
-      droppable.data = input.data;
-    }
-  });
+  );
 
   return {
     get droppable() {

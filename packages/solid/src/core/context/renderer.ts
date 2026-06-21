@@ -1,5 +1,3 @@
-import {batch, createEffect, createSignal, on} from 'solid-js';
-
 import type {DragDropManager} from '@dnd-kit/dom';
 
 type Renderer = DragDropManager['renderer'];
@@ -8,16 +6,16 @@ export function useRenderer(): {
   renderer: Renderer;
   trackRendering: (callback: () => void) => void;
 } {
-  const [transitionCount, setTransitionCount] = createSignal(0);
   let rendering: Promise<void> | null = null;
   let resolver: (() => void) | null = null;
+  let scheduled = false;
 
-  createEffect(
-    on(transitionCount, () => {
-      resolver?.();
-      rendering = null;
-    })
-  );
+  const resolveRendering = () => {
+    scheduled = false;
+    resolver?.();
+    resolver = null;
+    rendering = null;
+  };
 
   return {
     renderer: {
@@ -32,10 +30,12 @@ export function useRenderer(): {
         });
       }
 
-      batch(() => {
-        callback();
-        setTransitionCount((c) => c + 1);
-      });
+      callback();
+
+      if (!scheduled) {
+        scheduled = true;
+        queueMicrotask(resolveRendering);
+      }
     },
   };
 }
