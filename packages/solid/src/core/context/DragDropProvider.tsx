@@ -1,4 +1,4 @@
-import {createEffect, createMemo, onCleanup} from 'solid-js';
+import {createEffect, omit, onCleanup, untrack} from 'solid-js';
 import {DragDropManager, defaultPreset, resolveCustomizable} from '@dnd-kit/dom';
 import {isSortable} from '@dnd-kit/dom/sortable';
 
@@ -35,22 +35,21 @@ export function DragDropProvider(props: DragDropProviderProps) {
   };
   // Strip `children` before forwarding props to `DragDropManager`. The manager
   // constructor spreads its input (`{...input}`) which would otherwise invoke
-  // Solid's `children` getter and synthesize an orphan component subtree on
-  // every memo recomputation. See #2015.
-  const managerProps = omitChildren(props);
-  const manager = createMemo(
-    () => props.manager ?? new DragDropManager(managerProps)
-  );
+  // Solid's `children` getter and synthesize an orphan component subtree. See #2015.
+  const managerProps = omit(props, 'children');
+  const providedManager = untrack(() => props.manager);
+  const manager =
+    providedManager ?? untrack(() => new DragDropManager(managerProps));
 
   onCleanup(() => {
-    if (!props.manager) {
-      manager().destroy();
+    if (!providedManager) {
+      manager.destroy();
     }
   });
 
   createEffect(
     () => ({
-      manager: manager(),
+      manager,
       modifiers: props.modifiers,
       plugins: props.plugins,
       sensors: props.sensors,
@@ -67,7 +66,7 @@ export function DragDropProvider(props: DragDropProviderProps) {
   );
 
   createEffect(
-    () => manager().monitor,
+    () => manager.monitor,
     (monitor) => {
       const disposers = [
         monitor.addEventListener('beforedragstart', (event, manager) => {
@@ -118,21 +117,8 @@ export function DragDropProvider(props: DragDropProviderProps) {
   );
 
   return (
-    <DragDropContextProvider value={manager()}>
+    <DragDropContextProvider value={manager}>
       {props.children}
     </DragDropContextProvider>
   );
-}
-
-function omitChildren<T extends {children?: any}>(props: T) {
-  return new Proxy(props, {
-    getOwnPropertyDescriptor(target, property) {
-      if (property === 'children') return undefined;
-
-      return Object.getOwnPropertyDescriptor(target, property);
-    },
-    ownKeys(target) {
-      return Reflect.ownKeys(target).filter((key) => key !== 'children');
-    },
-  }) as Omit<T, 'children'>;
 }
