@@ -1,5 +1,5 @@
 import {type Data} from '@dnd-kit/abstract';
-import type {FeedbackInput} from '@dnd-kit/dom';
+import {Feedback, type FeedbackInput} from '@dnd-kit/dom';
 import type {SortableInput} from '@dnd-kit/dom/sortable';
 import {defaultSortableTransition, Sortable} from '@dnd-kit/dom/sortable';
 import {batch} from '@dnd-kit/state';
@@ -17,9 +17,7 @@ export interface UseSortableInput<T extends Data = Data>
   target?: Element;
 }
 
-export function useSortable<T extends Data = Data>(
-  input: UseSortableInput<T>
-) {
+export function useSortable<T extends Data = Data>(input: UseSortableInput<T>) {
   const transition = {
     ...defaultSortableTransition,
     ...input.transition,
@@ -30,6 +28,7 @@ export function useSortable<T extends Data = Data>(
       {
         ...input,
         register: false,
+        plugins: withFeedbackPlugin(input.plugins, input.feedback),
         transition,
         element: input.element,
         handle: input.handle,
@@ -59,6 +58,7 @@ export function useSortable<T extends Data = Data>(
       handle: handle(),
       id: input.id,
       modifiers: input.modifiers,
+      feedback: input.feedback,
       plugins: input.plugins,
       sensors: input.sensors,
       source: source(),
@@ -75,7 +75,7 @@ export function useSortable<T extends Data = Data>(
       sortable.id = options.id;
       sortable.disabled = options.disabled;
       sortable.alignment = options.alignment;
-      sortable.plugins = options.plugins;
+      sortable.plugins = withFeedbackPlugin(options.plugins, options.feedback);
       sortable.modifiers = options.modifiers;
       sortable.sensors = options.sensors;
       sortable.accept = options.accept;
@@ -133,4 +133,23 @@ export function useSortable<T extends Data = Data>(
     sourceRef: setSource,
     targetRef: setTarget,
   };
+}
+
+function withFeedbackPlugin<T extends Data>(
+  plugins: SortableInput<T>['plugins'],
+  feedback: FeedbackInput | undefined
+): SortableInput<T>['plugins'] {
+  if (feedback == null) return plugins;
+
+  const feedbackPlugin = Feedback.configure({feedback});
+
+  if (!plugins) {
+    return (defaults) => [feedbackPlugin, ...defaults];
+  }
+
+  if (typeof plugins === 'function') {
+    return (defaults) => [feedbackPlugin, ...plugins(defaults)];
+  }
+
+  return [feedbackPlugin, ...plugins];
 }

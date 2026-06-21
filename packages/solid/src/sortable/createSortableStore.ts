@@ -14,12 +14,13 @@ export type SortableStoreItem =
   | {id: UniqueIdentifier}
   | null;
 
-export type SortableStoreItems<T extends SortableStoreItem = SortableStoreItem> =
-  Record<string, T[]>;
+export type SortableStoreItems<
+  T extends SortableStoreItem = SortableStoreItem,
+> = Record<string, T[]>;
 
 export interface SortableStoreChange<
   TItem extends UniqueIdentifier = UniqueIdentifier,
-  TGroup extends string = string,
+  TGroup extends UniqueIdentifier = UniqueIdentifier,
 > {
   itemId: TItem;
   fromGroup: TGroup;
@@ -30,7 +31,9 @@ export interface SortableStoreChange<
   nextId: TItem | undefined;
 }
 
-export interface SortableStoreGroupChange<TGroup extends string = string> {
+export interface SortableStoreGroupChange<
+  TGroup extends UniqueIdentifier = UniqueIdentifier,
+> {
   groupId: TGroup;
   fromIndex: number;
   toIndex: number;
@@ -41,7 +44,7 @@ export interface SortableStoreGroupChange<TGroup extends string = string> {
 export interface SortableStoreMoveContext<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 > {
   event: SortableStoreDragOverEvent;
   previousItems: TItems;
@@ -49,7 +52,9 @@ export interface SortableStoreMoveContext<
   change: SortableStoreChange<TItem, TGroup> | undefined;
 }
 
-export interface SortableStoreGroupMoveContext<TGroup extends string> {
+export interface SortableStoreGroupMoveContext<
+  TGroup extends UniqueIdentifier,
+> {
   event: SortableStoreDragOverEvent;
   previousGroups: TGroup[];
   nextGroups: TGroup[];
@@ -59,7 +64,7 @@ export interface SortableStoreGroupMoveContext<TGroup extends string> {
 export interface SortableStoreCommitContext<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 > {
   event: SortableStoreDragEndEvent;
   initialItems: TItems;
@@ -67,7 +72,9 @@ export interface SortableStoreCommitContext<
   change: SortableStoreChange<TItem, TGroup>;
 }
 
-export interface SortableStoreGroupCommitContext<TGroup extends string> {
+export interface SortableStoreGroupCommitContext<
+  TGroup extends UniqueIdentifier,
+> {
   event: SortableStoreDragEndEvent;
   initialGroups: TGroup[];
   currentGroups: TGroup[];
@@ -78,7 +85,7 @@ export type SortableStoreSetItems<TItems extends SortableStoreItems> = (
   updater: (items: TItems) => void
 ) => void;
 
-export type SortableStoreSetGroups<TGroup extends string> = (
+export type SortableStoreSetGroups<TGroup extends UniqueIdentifier> = (
   updater: (groups: TGroup[]) => void
 ) => void;
 
@@ -107,7 +114,7 @@ export type SortableStoreDragEndEvent = DragEndEvent<
 export interface CreateSortableStoreInput<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier = UniqueIdentifier,
-  TGroup extends string = string,
+  TGroup extends UniqueIdentifier = UniqueIdentifier,
 > {
   items: () => TItems;
   setItems?: SortableStoreSetItems<TItems>;
@@ -135,7 +142,7 @@ export interface CreateSortableStoreInput<
 
 export interface SortableStoreControls<
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 > {
   onDragStart(event: SortableStoreDragStartEvent): void;
   onDragOver(event: SortableStoreDragOverEvent): void;
@@ -147,7 +154,7 @@ export interface SortableStoreControls<
 
 type QueueEntry<
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 > =
   | {
       type: 'move';
@@ -177,7 +184,7 @@ type SortableStoreEventKind = 'items' | 'groups';
 export function createSortableStore<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier = UniqueIdentifier,
-  TGroup extends string = string,
+  TGroup extends UniqueIdentifier = UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>
 ): SortableStoreControls<TItem, TGroup> {
@@ -344,7 +351,7 @@ export function createSortableStore<
 function* commitQueuedMove<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   entry: Extract<QueueEntry<TItem, TGroup>, {type: 'commit'}>,
@@ -373,7 +380,7 @@ function* commitQueuedMove<
 function* commitQueuedGroupMove<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   entry: Extract<QueueEntry<TItem, TGroup>, {type: 'commit'}>,
@@ -402,7 +409,7 @@ function* commitQueuedGroupMove<
 function applyQueuedMove<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   entry: Extract<QueueEntry<TItem, TGroup>, {type: 'move'}>,
@@ -437,7 +444,7 @@ function applyQueuedMove<
 function applyQueuedGroupMove<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   entry: Extract<QueueEntry<TItem, TGroup>, {type: 'move'}>,
@@ -472,11 +479,8 @@ function applyQueuedGroupMove<
 function applyDefaultMove<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
->(
-  input: CreateSortableStoreInput<TItems, TItem, TGroup>,
-  nextItems: TItems
-) {
+  TGroup extends UniqueIdentifier,
+>(input: CreateSortableStoreInput<TItems, TItem, TGroup>, nextItems: TItems) {
   const setItems = input.setItems;
 
   if (!setItems) {
@@ -489,7 +493,7 @@ function applyDefaultMove<
     const writable = items as SortableStoreItems;
 
     for (const group of getGroups(input, nextItems)) {
-      writable[group] = [...(nextItems[group] ?? [])];
+      writable[String(group)] = [...getGroupItems(nextItems, group)];
     }
   });
 }
@@ -497,7 +501,7 @@ function applyDefaultMove<
 function applyDefaultGroupMove<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   nextGroups: TGroup[]
@@ -518,7 +522,7 @@ function applyDefaultGroupMove<
 function getEventKind<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   event: SortableStoreDragStartEvent | SortableStoreDragOverEvent
@@ -554,7 +558,7 @@ function getEventKind<
 function getChange<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   initialItems: TItems,
@@ -583,7 +587,7 @@ function getChange<
   };
 }
 
-function getGroupChange<TGroup extends string>(
+function getGroupChange<TGroup extends UniqueIdentifier>(
   initialGroups: TGroup[],
   nextGroups: TGroup[],
   event: SortableStoreDragOverEvent
@@ -609,14 +613,14 @@ function getGroupChange<TGroup extends string>(
 function findItem<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   items: TItems,
   itemId: TItem
 ) {
   for (const group of getGroups(input, items)) {
-    const index = items[group]?.findIndex((item) => {
+    const index = getGroupItems(items, group).findIndex((item) => {
       return getItemId(input, item) === itemId;
     });
 
@@ -629,7 +633,7 @@ function findItem<
 function getNeighbors<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   items: TItems,
@@ -637,7 +641,7 @@ function getNeighbors<
   index: number,
   itemId: TItem
 ) {
-  const groupItems = items[group] ?? [];
+  const groupItems = getGroupItems(items, group);
   const previous = groupItems[index - 1];
   const next = groupItems[index + 1];
   const prevId = getItemId(input, previous) as TItem | undefined;
@@ -652,13 +656,13 @@ function getNeighbors<
 function getItemId<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(
   input: CreateSortableStoreInput<TItems, TItem, TGroup>,
   item: TItems[string][number] | undefined
 ) {
-  if (input.getItemId) return input.getItemId(item as TItems[string][number]);
   if (item == null) return undefined;
+  if (input.getItemId) return input.getItemId(item);
   if (typeof item === 'object') return item.id;
 
   return item;
@@ -667,13 +671,13 @@ function getItemId<
 function snapshotItems<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(input: CreateSortableStoreInput<TItems, TItem, TGroup>) {
   const items = input.items();
   const snapshot: SortableStoreItems = {};
 
   for (const group of getGroups(input, items)) {
-    snapshot[group] = [...(items[group] ?? [])];
+    snapshot[String(group)] = [...getGroupItems(items, group)];
   }
 
   return snapshot as TItems;
@@ -682,7 +686,7 @@ function snapshotItems<
 function snapshotGroups<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
+  TGroup extends UniqueIdentifier,
 >(input: CreateSortableStoreInput<TItems, TItem, TGroup>) {
   return [...(input.groups?.() ?? [])] as TGroup[];
 }
@@ -690,14 +694,26 @@ function snapshotGroups<
 function getGroups<
   TItems extends SortableStoreItems,
   TItem extends UniqueIdentifier,
-  TGroup extends string,
->(
-  input: CreateSortableStoreInput<TItems, TItem, TGroup>,
-  items: TItems
-) {
-  const groups = input.groups?.().map(String) ?? [];
+  TGroup extends UniqueIdentifier,
+>(input: CreateSortableStoreInput<TItems, TItem, TGroup>, items: TItems) {
+  const groups = new Map<string, UniqueIdentifier>();
 
-  return Array.from(new Set([...Object.keys(items), ...groups]));
+  for (const group of Object.keys(items)) {
+    groups.set(String(group), group);
+  }
+
+  for (const group of input.groups?.() ?? []) {
+    groups.set(String(group), group);
+  }
+
+  return Array.from(groups.values());
+}
+
+function getGroupItems<TItems extends SortableStoreItems>(
+  items: TItems,
+  group: UniqueIdentifier
+) {
+  return items[String(group)] ?? [];
 }
 
 function createQueue<T>(): Queue<T> {
