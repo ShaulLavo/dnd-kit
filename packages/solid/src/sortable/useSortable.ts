@@ -8,6 +8,8 @@ import {createEffect, createSignal} from 'solid-js';
 import {useDeepSignal} from '@dnd-kit/solid/hooks';
 import {useInstance} from '@dnd-kit/solid';
 
+let placeholderId = 0;
+
 export interface UseSortableInput<T extends Data = Data>
   extends Omit<SortableInput<T>, 'handle' | 'element' | 'source' | 'target'> {
   feedback?: FeedbackInput;
@@ -18,33 +20,22 @@ export interface UseSortableInput<T extends Data = Data>
 }
 
 export function useSortable<T extends Data = Data>(input: UseSortableInput<T>) {
-  const transition = {
-    ...defaultSortableTransition,
-    ...input.transition,
-  };
-
   const sortable = useInstance((manager) => {
     return new Sortable(
       {
-        ...input,
+        id: createPlaceholderId(),
+        index: 0,
         register: false,
-        plugins: withFeedbackPlugin(input.plugins, input.feedback),
-        transition,
-        element: input.element,
-        handle: input.handle,
-        target: input.target,
       },
       manager
     );
   });
   const trackedSortable = useDeepSignal(() => sortable);
 
-  const [element, setElement] = createSignal<Element | undefined>(
-    input.element
-  );
-  const [handle, setHandle] = createSignal<Element | undefined>(input.handle);
-  const [source, setSource] = createSignal<Element | undefined>(input.source);
-  const [target, setTarget] = createSignal<Element | undefined>(input.target);
+  const [element, setElement] = createSignal<Element | undefined>();
+  const [handle, setHandle] = createSignal<Element | undefined>();
+  const [source, setSource] = createSignal<Element | undefined>();
+  const [target, setTarget] = createSignal<Element | undefined>();
 
   createEffect(
     () => ({
@@ -54,24 +45,23 @@ export function useSortable<T extends Data = Data>(input: UseSortableInput<T>) {
       collisionPriority: input.collisionPriority,
       data: input.data,
       disabled: input.disabled ?? false,
-      element: element(),
-      handle: handle(),
+      element: element() ?? input.element,
+      handle: handle() ?? input.handle,
       id: input.id,
       modifiers: input.modifiers,
       feedback: input.feedback,
       plugins: input.plugins,
       sensors: input.sensors,
-      source: source(),
-      target: target(),
+      source: source() ?? input.source,
+      target: target() ?? input.target,
       transition: input.transition,
       type: input.type,
     }),
     (options) => {
-      if (options.element) sortable.element = options.element;
-      if (options.handle) sortable.handle = options.handle;
-      if (options.source) sortable.source = options.source;
-      if (options.target) sortable.target = options.target;
-
+      sortable.source = options.source;
+      sortable.target = options.target;
+      sortable.element = options.element;
+      sortable.handle = options.handle;
       sortable.id = options.id;
       sortable.disabled = options.disabled;
       sortable.alignment = options.alignment;
@@ -133,6 +123,12 @@ export function useSortable<T extends Data = Data>(input: UseSortableInput<T>) {
     sourceRef: setSource,
     targetRef: setTarget,
   };
+}
+
+function createPlaceholderId() {
+  placeholderId += 1;
+
+  return `__dnd-kit-solid-sortable-${placeholderId}`;
 }
 
 function withFeedbackPlugin<T extends Data>(

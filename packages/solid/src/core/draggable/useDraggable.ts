@@ -6,6 +6,8 @@ import {createEffect, createSignal} from 'solid-js';
 import {useDeepSignal} from '../../hooks/useDeepSignal.ts';
 import {useInstance} from '../hooks/useInstance.ts';
 
+let placeholderId = 0;
+
 export interface UseDraggableInput<T extends Data = Data>
   extends Omit<DraggableInput<T>, 'handle' | 'element'> {
   handle?: Element;
@@ -19,37 +21,32 @@ export function useDraggable<T extends Data = Data>(
     (manager) =>
       new Draggable(
         {
-          ...input,
+          id: createPlaceholderId(),
           register: false,
-          element: input.element,
-          handle: input.handle,
         },
         manager
       )
   );
   const trackedDraggable = useDeepSignal(() => draggable);
 
-  const [element, setElement] = createSignal<Element | undefined>(
-    input.element
-  );
-  const [handle, setHandle] = createSignal<Element | undefined>(input.handle);
+  const [element, setElement] = createSignal<Element | undefined>();
+  const [handle, setHandle] = createSignal<Element | undefined>();
 
   createEffect(
     () => ({
       alignment: input.alignment,
       data: input.data,
       disabled: input.disabled ?? false,
-      element: element(),
-      handle: handle(),
+      element: element() ?? input.element,
+      handle: handle() ?? input.handle,
       id: input.id,
       modifiers: input.modifiers,
       plugins: input.plugins,
       sensors: input.sensors,
     }),
     (options) => {
-      if (options.element) draggable.element = options.element;
-      if (options.handle) draggable.handle = options.handle;
-
+      draggable.element = options.element;
+      draggable.handle = options.handle;
       draggable.id = options.id;
       draggable.disabled = options.disabled;
       draggable.alignment = options.alignment;
@@ -73,4 +70,10 @@ export function useDraggable<T extends Data = Data>(
     ref: setElement,
     handleRef: setHandle,
   };
+}
+
+function createPlaceholderId() {
+  placeholderId += 1;
+
+  return `__dnd-kit-solid-draggable-${placeholderId}`;
 }

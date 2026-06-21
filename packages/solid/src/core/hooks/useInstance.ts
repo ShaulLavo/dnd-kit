@@ -19,11 +19,26 @@ export function useInstance<T extends Instance>(
     () => manager,
     (_manager) => {
       instance.manager = _manager;
-      const cleanup = instance.register();
 
-      return () => cleanup?.();
+      return deferRegister(instance);
     }
   );
 
   return instance;
+}
+
+function deferRegister(instance: Instance): CleanupFunction {
+  let cleanup: CleanupFunction | void;
+  let disposed = false;
+
+  queueMicrotask(() => {
+    if (disposed) return;
+
+    cleanup = instance.register();
+  });
+
+  return () => {
+    disposed = true;
+    cleanup?.();
+  };
 }
