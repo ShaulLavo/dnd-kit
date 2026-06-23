@@ -7,10 +7,7 @@ import type {
   UniqueIdentifier,
 } from '@dnd-kit/abstract';
 import {resolveCustomizable} from '@dnd-kit/abstract';
-import {
-  defaultCollisionDetection,
-  type CollisionDetector,
-} from '@dnd-kit/collision';
+import {pointerIntersection, type CollisionDetector} from '@dnd-kit/collision';
 import type {Alignment} from '@dnd-kit/geometry';
 import {Draggable, Droppable, Feedback} from '@dnd-kit/dom';
 import type {
@@ -61,6 +58,7 @@ const defaultPlugins: PluginConstructor[] = [
   SortableKeyboardPlugin,
   OptimisticSortingPlugin,
 ];
+const defaultSortableCollisionDetection = pointerIntersection;
 
 export interface SortableInput<T extends Data>
   extends Omit<DraggableInput<T>, 'disabled' | 'plugins'>,
@@ -187,7 +185,12 @@ export class Sortable<T extends Data = Data> {
     const disabledState = normalizeDisabled(disabled);
 
     this.droppable = new SortableDroppable<T>(
-      {...input, disabled: disabledState.droppable},
+      {
+        ...input,
+        collisionDetector:
+          input.collisionDetector ?? defaultSortableCollisionDetection,
+        disabled: disabledState.droppable,
+      },
       manager,
       this
     );
@@ -442,7 +445,8 @@ export class Sortable<T extends Data = Data> {
   }
 
   public set collisionDetector(value: CollisionDetector | undefined) {
-    this.droppable.collisionDetector = value ?? defaultCollisionDetection;
+    this.droppable.collisionDetector =
+      value ?? defaultSortableCollisionDetection;
   }
 
   public set alignment(value: Alignment | undefined) {
@@ -561,7 +565,7 @@ export class SortableDraggable<T extends Data> extends Draggable<T> {
 
 export class SortableDroppable<T extends Data> extends Droppable<T> {
   constructor(
-    input: DraggableInput<T>,
+    input: DroppableInput<T>,
     manager: DragDropManager | undefined,
     public sortable: Sortable<T>
   ) {
@@ -574,5 +578,24 @@ export class SortableDroppable<T extends Data> extends Droppable<T> {
 
   get group() {
     return this.sortable.group;
+  }
+
+  public accepts(draggable: Draggable): boolean {
+    if (
+      draggable instanceof SortableDraggable &&
+      draggable.sortable === this.sortable
+    ) {
+      return false;
+    }
+
+    if (
+      draggable instanceof SortableDraggable &&
+      draggable.sortable.type !== this.sortable.type &&
+      draggable.sortable.group === this.sortable.id
+    ) {
+      return false;
+    }
+
+    return super.accepts(draggable);
   }
 }

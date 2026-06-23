@@ -35,7 +35,7 @@ export class RestrictToElement extends Modifier<DragDropManager, Options> {
           return;
         }
 
-        let timeout: NodeJS.Timeout | undefined;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         const updateBoundingRectangle = () => {
           this.boundingRectangle.value = getBoundingRectangle(target);
         };

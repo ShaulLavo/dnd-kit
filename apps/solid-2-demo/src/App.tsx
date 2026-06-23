@@ -1,11 +1,13 @@
 import {
   action,
   createOptimisticStore,
+  createSignal,
   flush,
   For,
   refresh,
 } from 'solid-js';
 import {CollisionPriority} from '@dnd-kit/abstract';
+import {defaultPreset, KeyboardSensor, PointerSensor} from '@dnd-kit/dom';
 import {DragDropProvider} from '@dnd-kit/solid';
 import {
   createSortableStore,
@@ -13,44 +15,29 @@ import {
   type SortableStoreGroupChange,
   useSortable,
 } from '@dnd-kit/solid/sortable';
-import {defaultPreset, PointerSensor, KeyboardSensor} from '@dnd-kit/dom';
 
-type ColumnId = 'A' | 'B' | 'C' | 'D';
+type ColumnId = 'Backlog' | 'Design' | 'Build' | 'Ship';
+type ItemId = string;
 
 interface Column {
   id: ColumnId;
 }
 
 interface Card {
-  id: string;
+  id: ItemId;
 }
 
 interface Board {
   columns: Column[];
   items: Record<ColumnId, Card[]>;
+  counter: number;
 }
 
-function createRange(length: number) {
-  return Array.from({length}, (_, i) => i + 1);
-}
-
-const ITEM_COUNT = 6;
-
-const COLORS: Record<ColumnId, string> = {
-  A: '#7193f1',
-  B: '#FF851B',
-  C: '#2ECC40',
-  D: '#ff3680',
-};
-
-const initialBoard: Board = {
-  columns: (['A', 'B', 'C', 'D'] as const).map(createColumn),
-  items: {
-    A: createRange(ITEM_COUNT).map((id) => createCard(`A${id}`)),
-    B: createRange(ITEM_COUNT).map((id) => createCard(`B${id}`)),
-    C: createRange(ITEM_COUNT).map((id) => createCard(`C${id}`)),
-    D: [],
-  },
+const colors: Record<ColumnId, string> = {
+  Backlog: '#2563eb',
+  Design: '#db2777',
+  Build: '#059669',
+  Ship: '#7c3aed',
 };
 
 const sensors = [
@@ -62,7 +49,19 @@ const sensors = [
   KeyboardSensor,
 ];
 
+const initialBoard: Board = {
+  columns: (['Backlog', 'Design', 'Build', 'Ship'] as const).map(createColumn),
+  items: {
+    Backlog: ['Copy checklist', 'Billing states', 'Keyboard QA'].map(createCard),
+    Design: ['Board density', 'Card tokens'].map(createCard),
+    Build: ['Optimistic moves', 'Fractional order'].map(createCard),
+    Ship: [],
+  },
+  counter: 1,
+};
+
 let authoritativeBoard = cloneBoard(initialBoard);
+let nextCardCounter = initialBoard.counter;
 
 function SortableItem(props: {card: Card; column: ColumnId; index: number}) {
   const {isDragging, ref, handleRef} = useSortable({
@@ -79,25 +78,33 @@ function SortableItem(props: {card: Card; column: ColumnId; index: number}) {
       return {group: props.column};
     },
     accept: 'item',
-    type: 'item',
     feedback: 'clone',
+    type: 'item',
   });
 
   return (
     <li
       ref={ref}
-      class="item"
-      data-shadow={isDragging() ? 'true' : undefined}
-      data-accent-color={props.column}
-      style={{'--accent-color': COLORS[props.column]}}
+      class="card"
+      data-dragging={isDragging() ? 'true' : undefined}
+      style={{'--accent': colors[props.column]}}
     >
-      {props.card.id}
-      <button ref={handleRef} class="handle" />
+      <span>{props.card.id}</span>
+      <button
+        ref={handleRef}
+        class="handle"
+        aria-label={`Drag ${props.card.id}`}
+      />
     </li>
   );
 }
 
-function SortableColumn(props: {id: ColumnId; index: number; rows: Card[]}) {
+function SortableColumn(props: {
+  id: ColumnId;
+  index: number;
+  rows: Card[];
+  onAdd(column: ColumnId): void;
+}) {
   const {isDragging, ref, handleRef} = useSortable({
     get id() {
       return props.id;
@@ -111,15 +118,23 @@ function SortableColumn(props: {id: ColumnId; index: number; rows: Card[]}) {
   });
 
   return (
-    <div
+    <section
       ref={ref}
-      class="container"
-      data-shadow={isDragging() ? 'true' : undefined}
+      class="column"
+      data-dragging={isDragging() ? 'true' : undefined}
+      style={{'--accent': colors[props.id]}}
     >
-      <h2>
-        {props.id}
-        <button ref={handleRef} class="handle" />
-      </h2>
+      <header>
+        <button
+          ref={handleRef}
+          class="handle column-handle"
+          aria-label={`Drag ${props.id}`}
+        />
+        <h2>{props.id}</h2>
+        <button class="add" onClick={() => props.onAdd(props.id)}>
+          Add
+        </button>
+      </header>
       <ul>
         <For each={props.rows}>
           {(card, itemIndex) => (
@@ -131,7 +146,7 @@ function SortableColumn(props: {id: ColumnId; index: number; rows: Card[]}) {
           )}
         </For>
       </ul>
-    </div>
+    </section>
   );
 }
 
@@ -140,10 +155,11 @@ export default function App() {
     async () => cloneBoard(authoritativeBoard),
     cloneBoard(authoritativeBoard)
   );
+  const [lastCommit, setLastCommit] = createSignal<string>();
 
   const sortableStore = createSortableStore<
     Board['items'],
-    string,
+    ItemId,
     ColumnId
   >({
     action,
@@ -171,6 +187,24 @@ export default function App() {
     },
   });
 
+  const addItemAction = action(function* (column: ColumnId) {
+    const counter = nextCardCounter++;
+    const item = createCard(`${column} ${counter}`);
+
+    setBoard((draft) => {
+      draft.counter = Math.max(draft.counter, nextCardCounter);
+      draft.items[column] = [...draft.items[column], item];
+    });
+
+    yield delay(80);
+    authoritativeBoard = addItemToBoard(authoritativeBoard, column, item);
+    yield refreshBoard();
+  });
+
+  const addItem = (column: ColumnId) => {
+    addItemAction(column).catch((error) => console.error(error));
+  };
+
   return (
     <DragDropProvider
       plugins={defaultPreset.plugins}
@@ -179,26 +213,38 @@ export default function App() {
       onDragOver={sortableStore.onDragOver}
       onDragEnd={sortableStore.onDragEnd}
     >
-      <div class="wrapper">
-        <For each={board.columns}>
-          {(column, columnIndex) => (
-            <SortableColumn
-              id={column.id}
-              index={columnIndex()}
-              rows={board.items[column.id]}
-            />
-          )}
-        </For>
-      </div>
+      <main>
+        <div class="toolbar">
+          <div>
+            <h1>Strello</h1>
+            <p>Solid 2 optimistic store</p>
+          </div>
+          <output>{lastCommit() ?? 'No commits yet'}</output>
+        </div>
+        <div class="board">
+          <For each={board.columns}>
+            {(column, columnIndex) => (
+              <SortableColumn
+                id={column.id}
+                index={columnIndex()}
+                rows={board.items[column.id]}
+                onAdd={addItem}
+              />
+            )}
+          </For>
+        </div>
+      </main>
     </DragDropProvider>
   );
 
-  async function persistMove(change: SortableStoreChange<string, ColumnId>) {
-    await delay(80);
+  async function persistMove(change: SortableStoreChange<ItemId, ColumnId>) {
+    await new Promise((resolve) => setTimeout(resolve, 80));
     authoritativeBoard = {
       ...cloneBoard(authoritativeBoard),
       items: applyItemChange(authoritativeBoard.items, change),
     };
+    setLastCommit(formatChange(change));
+    console.info('dnd-kit solid store commit', change);
     await refreshBoard();
   }
 
@@ -210,6 +256,8 @@ export default function App() {
       ...cloneBoard(authoritativeBoard),
       columns: applyColumnChange(authoritativeBoard.columns, change),
     };
+    setLastCommit(formatGroupChange(change));
+    console.info('dnd-kit solid group commit', change);
     await refreshBoard();
   }
 
@@ -224,17 +272,10 @@ function delay(duration: number) {
   return new Promise((resolve) => setTimeout(resolve, duration));
 }
 
-function createColumn(id: ColumnId): Column {
-  return {id};
-}
-
-function createCard(id: string): Card {
-  return {id};
-}
-
 function cloneBoard(board: Board): Board {
   return {
-    columns: board.columns.map((column) => createColumn(column.id)),
+    columns: board.columns.map(cloneColumn),
+    counter: board.counter,
     items: cloneItems(board.items),
   };
 }
@@ -243,14 +284,42 @@ function cloneItems(items: Board['items']) {
   return Object.fromEntries(
     Object.entries(items).map(([column, rows]) => [
       column,
-      rows.map((card) => createCard(card.id)),
+      rows.map(cloneCard),
     ])
   ) as Board['items'];
 }
 
+function createColumn(id: ColumnId): Column {
+  return {id};
+}
+
+function cloneColumn(column: Column): Column {
+  return createColumn(column.id);
+}
+
+function createCard(id: ItemId): Card {
+  return {id};
+}
+
+function cloneCard(card: Card): Card {
+  return createCard(card.id);
+}
+
+function addItemToBoard(board: Board, column: ColumnId, item: Card): Board {
+  const next = cloneBoard(board);
+
+  if (!next.items[column].some((card) => card.id === item.id)) {
+    next.items[column] = [...next.items[column], cloneCard(item)];
+  }
+
+  next.counter = Math.max(next.counter, nextCardCounter);
+
+  return next;
+}
+
 function applyItemChange(
   items: Board['items'],
-  change: SortableStoreChange<string, ColumnId>
+  change: SortableStoreChange<ItemId, ColumnId>
 ) {
   const next = cloneItems(items);
   const currentGroup = findItemGroup(next, change.itemId);
@@ -279,7 +348,7 @@ function applyColumnChange(
 ) {
   const column = columns.find((column) => column.id === change.groupId);
 
-  if (!column) return columns.map((column) => createColumn(column.id));
+  if (!column) return columns.map(cloneColumn);
 
   return insertRelative(
     removeById(columns, change.groupId),
@@ -290,7 +359,7 @@ function applyColumnChange(
   );
 }
 
-function findItemGroup(items: Board['items'], itemId: string) {
+function findItemGroup(items: Board['items'], itemId: ItemId) {
   return (Object.keys(items) as ColumnId[]).find((column) => {
     return items[column].some((card) => card.id === itemId);
   });
@@ -319,11 +388,15 @@ function insertRelative<T extends {id: string}>(
 ) {
   const prevIndex = findIndexById(rows, prevId);
 
-  if (prevIndex >= 0) return insertAt(rows, item, prevIndex + 1);
+  if (prevIndex >= 0) {
+    return insertAt(rows, item, prevIndex + 1);
+  }
 
   const nextIndex = findIndexById(rows, nextId);
 
-  if (nextIndex >= 0) return insertAt(rows, item, nextIndex);
+  if (nextIndex >= 0) {
+    return insertAt(rows, item, nextIndex);
+  }
 
   return insertAt(rows, item, fallbackIndex);
 }
@@ -344,4 +417,18 @@ function insertAt<T>(rows: T[], item: T, index: number) {
   next.splice(safeIndex, 0, item);
 
   return next;
+}
+
+function formatChange(change: SortableStoreChange<ItemId, ColumnId>) {
+  const prev = change.prevId ?? 'start';
+  const next = change.nextId ?? 'end';
+
+  return `${change.itemId}: ${change.fromGroup}[${change.fromIndex}] -> ${change.toGroup}[${change.toIndex}], between ${prev} and ${next}`;
+}
+
+function formatGroupChange(change: SortableStoreGroupChange<ColumnId>) {
+  const prev = change.prevId ?? 'start';
+  const next = change.nextId ?? 'end';
+
+  return `${change.groupId}: column ${change.fromIndex} -> ${change.toIndex}, between ${prev} and ${next}`;
 }

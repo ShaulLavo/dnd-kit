@@ -1,0 +1,24 @@
+{
+  "name": "@dnd-kit/solid-2-demo",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4174"
+  },
+  "dependencies": {
+    "@dnd-kit/abstract": "*",
+    "@dnd-kit/dom": "*",
+    "@dnd-kit/helpers": "*",
+    "@dnd-kit/solid": "*",
+    "@solidjs/web": "2.0.0-beta.14",
+    "solid-js": "2.0.0-beta.14"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-solid": "^2.11.12"
+  }
+}

@@ -1,6 +1,6 @@
 import type {DragDropEventHandlers, Data} from '@dnd-kit/abstract';
 import type {Draggable, Droppable, DragDropManager} from '@dnd-kit/dom';
-import {createEffect, onCleanup} from 'solid-js';
+import {createEffect} from 'solid-js';
 import type {CleanupFunction} from '@dnd-kit/state';
 
 import {useDragDropManager} from './useDragDropManager.ts';
@@ -44,37 +44,46 @@ export function useDragDropMonitor<
 >(handlers: EventHandlers<T, U, V, W>): void {
   const manager = useDragDropManager();
 
-  createEffect(() => {
-    if (!manager) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-          'useDragDropMonitor hook was called outside of a DragDropProvider. ' +
-            'Make sure your app is wrapped in a DragDropProvider component.'
-        );
+  createEffect(
+    () => ({
+      handlers: Object.entries(handlers),
+      manager,
+    }),
+    ({handlers, manager}) => {
+      if (!manager) {
+        warnMissingProvider();
+        return;
       }
-      return;
-    }
 
-    const cleanupFns = Object.entries(handlers).reduce<CleanupFunction[]>(
-      (acc, [handlerName, handler]) => {
-        if (handler) {
+      const cleanupFns = handlers.reduce<CleanupFunction[]>(
+        (acc, [handlerName, handler]) => {
+          if (!handler) return acc;
+
           const eventName = handlerName
             .replace(/^on/, '')
             .toLowerCase() as keyof Events<T, U, V, W>;
-
-          const unsubscribe = manager.monitor.addEventListener(
+          const cleanup = manager.monitor.addEventListener(
             eventName,
             handler as any
           );
 
-          acc.push(unsubscribe);
-        }
+          acc.push(cleanup);
 
-        return acc;
-      },
-      []
-    );
+          return acc;
+        },
+        []
+      );
 
-    onCleanup(() => cleanupFns.forEach((cleanup) => cleanup()));
-  });
+      return () => cleanupFns.forEach((cleanup) => cleanup());
+    }
+  );
+}
+
+function warnMissingProvider() {
+  if (process.env.NODE_ENV === 'production') return;
+
+  console.warn(
+    'useDragDropMonitor hook was called outside of a DragDropProvider. ' +
+      'Make sure your app is wrapped in a DragDropProvider component.'
+  );
 }

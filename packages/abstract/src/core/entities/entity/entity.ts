@@ -85,8 +85,6 @@ export class Entity<
 
         previousId = id;
         manager?.registry.register(this);
-
-        return () => manager?.registry.unregister(this);
       },
       ...(effects?.() ?? []),
     ];

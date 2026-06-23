@@ -1,0 +1,179 @@
+:root {
+  color: #172033;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f5f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+main {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.toolbar {
+  align-items: end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 0 auto 20px;
+  max-width: 1180px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 720;
+}
+
+p {
+  color: #607089;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+output {
+  background: #ffffff;
+  border: 1px solid #dbe2ee;
+  border-radius: 8px;
+  color: #344256;
+  font-size: 13px;
+  max-width: min(520px, 55vw);
+  overflow: hidden;
+  padding: 10px 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  margin: 0 auto;
+  max-width: 1180px;
+}
+
+.column {
+  background: #ffffff;
+  border: 1px solid #dbe2ee;
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgb(34 48 72 / 0.08);
+  min-height: 420px;
+  padding: 12px;
+}
+
+.column[data-dragging='true'] {
+  opacity: 0.65;
+}
+
+.column header {
+  align-items: center;
+  border-bottom: 1px solid #edf1f7;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 28px 1fr auto;
+  padding-bottom: 10px;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+ul {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 12px 0 0;
+  min-height: 320px;
+  padding: 0;
+}
+
+.card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d8e0ed;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgb(34 48 72 / 0.08);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 28px;
+  min-height: 54px;
+  padding: 10px 10px 10px 12px;
+}
+
+.card[data-dragging='true'] {
+  opacity: 0.45;
+}
+
+.handle {
+  background:
+    linear-gradient(90deg, #9aa8bd 35%, transparent 0) 8px 8px / 8px 4px,
+    linear-gradient(90deg, #9aa8bd 35%, transparent 0) 8px 13px / 8px 4px,
+    linear-gradient(90deg, #9aa8bd 35%, transparent 0) 8px 18px / 8px 4px,
+    #f8fafc;
+  border: 1px solid #d3dcea;
+  border-radius: 6px;
+  cursor: grab;
+  height: 28px;
+  width: 28px;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.column-handle {
+  background-color: color-mix(in srgb, var(--accent) 10%, #f8fafc);
+}
+
+.add {
+  background: #172033;
+  border: 0;
+  border-radius: 7px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+[data-dnd-overlay] {
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  main {
+    padding: 16px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  output {
+    max-width: 100%;
+  }
+
+  .board {
+    grid-template-columns: 1fr;
+  }
+}

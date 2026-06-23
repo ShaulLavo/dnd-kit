@@ -219,7 +219,7 @@ export class Accessibility extends Plugin<DragDropManager> {
 }
 
 function debounce(fn: () => void, wait: number) {
-  let timeout: NodeJS.Timeout | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   const debounced = () => {
     clearTimeout(timeout);
     timeout = setTimeout(fn, wait);

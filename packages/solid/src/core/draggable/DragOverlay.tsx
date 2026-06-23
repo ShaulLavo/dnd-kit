@@ -1,13 +1,13 @@
 import {Feedback} from '@dnd-kit/dom';
-import {Show, createEffect, createMemo, createSignal, onCleanup} from 'solid-js';
-import {Dynamic} from 'solid-js/web';
+import {Show, createEffect, createMemo, createSignal} from 'solid-js';
+import {Dynamic} from '@solidjs/web';
 
-import {DragDropContext} from '../context/context.ts';
+import {DragDropContextProvider} from '../context/context.ts';
 import {useDragDropManager} from '../hooks/useDragDropManager.ts';
 import {useDragOperation} from '../hooks/useDragOperation.ts';
 
 import type {DragDropManager, Draggable, Droppable, DropAnimation} from '@dnd-kit/dom';
-import type {JSX, ValidComponent} from 'solid-js';
+import type {JSX, ValidComponent} from '@solidjs/web';
 import type {Data} from '@dnd-kit/abstract';
 
 export interface DragOverlayProps<
@@ -47,34 +47,43 @@ export function DragOverlay<T extends Data, U extends Draggable<T>>(
     return props.disabled ?? false;
   };
 
-  createEffect(() => {
-    if (!source()) {
+  createEffect(
+    () => source(),
+    (source) => {
+      if (source) return;
+
       setElement(undefined);
     }
-  });
+  );
 
-  createEffect(() => {
-    const _manager = manager;
+  createEffect(
+    () => ({
+      disabled: isDisabled(),
+      dropAnimation: props.dropAnimation,
+      element: element(),
+      manager,
+    }),
+    ({disabled, dropAnimation, element, manager}) => {
+      if (!manager || disabled) return;
 
-    if (!_manager || isDisabled()) return;
+      const feedback = manager.plugins.find(
+        (plugin): plugin is Feedback => plugin instanceof Feedback
+      );
 
-    const feedback = _manager.plugins.find(
-      (plugin): plugin is Feedback => plugin instanceof Feedback
-    );
+      if (!feedback) return;
 
-    if (!feedback) return;
+      feedback.overlay = element;
+      feedback.dropAnimation = dropAnimation;
 
-    feedback.overlay = element();
-    feedback.dropAnimation = props.dropAnimation;
-
-    onCleanup(() => {
-      feedback.overlay = undefined;
-      feedback.dropAnimation = undefined;
-    });
-  });
+      return () => {
+        feedback.overlay = undefined;
+        feedback.dropAnimation = undefined;
+      };
+    }
+  );
 
   return (
-    <DragDropContext.Provider value={patchedManager()}>
+    <DragDropContextProvider value={patchedManager()}>
       <Show when={!isDisabled() ? source() : undefined}>
         {(src) => (
           <Dynamic
@@ -90,7 +99,7 @@ export function DragOverlay<T extends Data, U extends Draggable<T>>(
           </Dynamic>
         )}
       </Show>
-    </DragDropContext.Provider>
+    </DragDropContextProvider>
   );
 }
 

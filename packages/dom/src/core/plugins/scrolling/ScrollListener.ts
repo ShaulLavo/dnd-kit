@@ -9,7 +9,7 @@ const listenerOptions: AddEventListenerOptions = {
 };
 
 export class ScrollListener extends CorePlugin<DragDropManager> {
-  #timeout: NodeJS.Timeout | undefined;
+  #timeout: ReturnType<typeof setTimeout> | undefined;
 
   constructor(manager: DragDropManager) {
     super(manager);

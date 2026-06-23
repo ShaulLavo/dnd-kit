@@ -1,111 +1,113 @@
 import {type Data} from '@dnd-kit/abstract';
+import {Feedback, type FeedbackInput} from '@dnd-kit/dom';
 import type {SortableInput} from '@dnd-kit/dom/sortable';
 import {defaultSortableTransition, Sortable} from '@dnd-kit/dom/sortable';
 import {batch} from '@dnd-kit/state';
-import {createEffect, createSignal, on} from 'solid-js';
+import {createEffect, createSignal} from 'solid-js';
 
 import {useDeepSignal} from '@dnd-kit/solid/hooks';
 import {useInstance} from '@dnd-kit/solid';
 
+let placeholderId = 0;
+
 export interface UseSortableInput<T extends Data = Data>
   extends Omit<SortableInput<T>, 'handle' | 'element' | 'source' | 'target'> {
+  feedback?: FeedbackInput;
   handle?: Element;
   element?: Element;
   source?: Element;
   target?: Element;
 }
 
-export function useSortable<T extends Data = Data>(
-  input: UseSortableInput<T>
-) {
-  const transition = {
-    ...defaultSortableTransition,
-    ...input.transition,
-  };
-
+export function useSortable<T extends Data = Data>(input: UseSortableInput<T>) {
   const sortable = useInstance((manager) => {
     return new Sortable(
       {
-        ...input,
+        id: createPlaceholderId(),
+        index: 0,
         register: false,
-        transition,
-        element: input.element,
-        handle: input.handle,
-        target: input.target,
       },
       manager
     );
   });
   const trackedSortable = useDeepSignal(() => sortable);
 
-  const [element, setElement] = createSignal<Element | undefined>(
-    input.element
+  const [element, setElement] = createSignal<Element | undefined>();
+  const [handle, setHandle] = createSignal<Element | undefined>();
+  const [source, setSource] = createSignal<Element | undefined>();
+  const [target, setTarget] = createSignal<Element | undefined>();
+
+  createEffect(
+    () => ({
+      accept: input.accept,
+      alignment: input.alignment,
+      collisionDetector: input.collisionDetector,
+      collisionPriority: input.collisionPriority,
+      data: input.data,
+      disabled: input.disabled ?? false,
+      element: element() ?? input.element,
+      handle: handle() ?? input.handle,
+      id: input.id,
+      modifiers: input.modifiers,
+      feedback: input.feedback,
+      plugins: input.plugins,
+      sensors: input.sensors,
+      source: source() ?? input.source,
+      target: target() ?? input.target,
+      transition: input.transition,
+      type: input.type,
+    }),
+    (options) => {
+      sortable.source = options.source;
+      sortable.target = options.target;
+      sortable.element = options.element;
+      sortable.handle = options.handle;
+      sortable.id = options.id;
+      sortable.disabled = options.disabled;
+      sortable.alignment = options.alignment;
+      sortable.plugins = withFeedbackPlugin(options.plugins, options.feedback);
+      sortable.modifiers = options.modifiers;
+      sortable.sensors = options.sensors;
+      sortable.accept = options.accept;
+      sortable.type = options.type;
+      sortable.collisionPriority = options.collisionPriority;
+      sortable.transition = options.transition
+        ? {...defaultSortableTransition, ...options.transition}
+        : defaultSortableTransition;
+
+      if (options.collisionDetector) {
+        sortable.collisionDetector = options.collisionDetector;
+      }
+
+      if (options.data) {
+        sortable.data = options.data;
+      }
+    }
   );
-  const [handle, setHandle] = createSignal<Element | undefined>(input.handle);
-  const [source, setSource] = createSignal<Element | undefined>(input.source);
-  const [target, setTarget] = createSignal<Element | undefined>(input.target);
-
-  createEffect(() => {
-    const el = element();
-    if (el) sortable.element = el;
-
-    const h = handle();
-    if (h) sortable.handle = h;
-
-    const s = source();
-    if (s) sortable.source = s;
-
-    const t = target();
-    if (t) sortable.target = t;
-
-    sortable.id = input.id;
-    sortable.disabled = input.disabled ?? false;
-    sortable.alignment = input.alignment;
-    sortable.plugins = input.plugins;
-    sortable.modifiers = input.modifiers;
-    sortable.sensors = input.sensors;
-    sortable.accept = input.accept;
-    sortable.type = input.type;
-    sortable.collisionPriority = input.collisionPriority;
-    sortable.transition = input.transition
-      ? {...defaultSortableTransition, ...input.transition}
-      : defaultSortableTransition;
-
-    if (input.collisionDetector) {
-      sortable.collisionDetector = input.collisionDetector;
-    }
-
-    if (input.data) {
-      sortable.data = input.data;
-    }
-  });
 
   // Batch group + index updates
   createEffect(
-    on(
-      () => [input.group, input.index],
-      () => {
-        batch(() => {
-          sortable.group = input.group;
-          sortable.index = input.index;
-        });
-      }
-    )
+    () => ({
+      group: input.group,
+      index: input.index,
+    }),
+    ({group, index}) => {
+      batch(() => {
+        sortable.group = group;
+        sortable.index = index;
+      });
+    }
   );
 
   // Refresh shape when index changes while idle
   createEffect(
-    on(
-      () => input.index,
-      () => {
-        if (
-          sortable.manager?.dragOperation.status.idle &&
-          sortable.transition?.idle
-        ) {
-          sortable.refreshShape();
-        }
-      }
-    )
+    () => input.index,
+    () => {
+      if (!sortable.manager?.dragOperation.status.idle) return;
+      if (!sortable.transition?.idle) return;
+
+      sortable.refreshShape();
+    }
   );
 
   return {
@@ -121,4 +123,29 @@ export function useSortable<T extends Data = Data>(
     sourceRef: setSource,
     targetRef: setTarget,
   };
+}
+
+function createPlaceholderId() {
+  placeholderId += 1;
+
+  return `__dnd-kit-solid-sortable-${placeholderId}`;
+}
+
+function withFeedbackPlugin<T extends Data>(
+  plugins: SortableInput<T>['plugins'],
+  feedback: FeedbackInput | undefined
+): SortableInput<T>['plugins'] {
+  if (feedback == null) return plugins;
+
+  const feedbackPlugin = Feedback.configure({feedback});
+
+  if (!plugins) {
+    return (defaults) => [feedbackPlugin, ...defaults];
+  }
+
+  if (typeof plugins === 'function') {
+    return (defaults) => [feedbackPlugin, ...plugins(defaults)];
+  }
+
+  return [feedbackPlugin, ...plugins];
 }

@@ -88,7 +88,8 @@ class SandpackElement extends HTMLElement {
     } catch {}
 
     if (isSolid) {
-      dependencies["solid-js"] = "^1.9.0";
+      dependencies["solid-js"] = "2.0.0-beta.14";
+      dependencies["@solidjs/web"] = "2.0.0-beta.14";
       dependencies["babel-preset-solid"] = "latest";
 
       const solidInfraFiles = {
@@ -107,15 +108,15 @@ class SandpackElement extends HTMLElement {
           hidden: true,
         },
         '/index.ts': {
-          code: 'import "./styles.css";\\nimport {render} from "solid-js/web";\\nimport App from "./App";\\n\\nrender(App, document.getElementById("app"));',
+          code: 'import "./styles.css";\\nimport {render} from "@solidjs/web";\\nimport App from "./App";\\n\\nrender(App, document.getElementById("app")!);',
           hidden: true,
         },
         '/.babelrc': {
-          code: JSON.stringify({presets: ["babel-preset-solid"]}, null, 2),
+          code: JSON.stringify({presets: [["babel-preset-solid", {moduleName: "@solidjs/web"}]]}, null, 2),
           hidden: true,
         },
         '/tsconfig.json': {
-          code: JSON.stringify({compilerOptions: {jsx: "preserve", jsxImportSource: "solid-js", noEmit: true}}, null, 2),
+          code: JSON.stringify({compilerOptions: {jsx: "preserve", jsxImportSource: "@solidjs/web", noEmit: true}}, null, 2),
           hidden: true,
         },
       };

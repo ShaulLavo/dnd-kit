@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'bun:test';
 
+import {pointerIntersection} from '@dnd-kit/collision';
 import {Draggable, Droppable} from '@dnd-kit/dom';
 import {
   Sortable,
@@ -154,6 +155,12 @@ describe('isSortableOperation', () => {
 // ---------------------------------------------------------------------------
 
 describe('Sortable disabled', () => {
+  it('uses pointer-only collision detection by default', () => {
+    const sortable = createSortable();
+
+    expect(sortable.droppable.collisionDetector).toBe(pointerIntersection);
+  });
+
   it('sets sortable.disabled when disabled is true', () => {
     const sortable = createSortable({disabled: true});
     expect(sortable.disabled).toBe(true);
@@ -261,5 +268,55 @@ describe('Sortable disabled', () => {
     sortable.disabled = false;
 
     expect(sortable.droppable.disabled).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sortable accepts
+// ---------------------------------------------------------------------------
+
+describe('Sortable accepts', () => {
+  it('does not accept its own draggable as a drop target', () => {
+    const sortable = createSortable({id: 's1', index: 0});
+
+    expect(sortable.droppable.accepts(sortable.draggable)).toBe(false);
+  });
+
+  it('does not accept an item draggable on its own group container', () => {
+    const item = createSortable({id: 'item', index: 0, group: 'group-a'});
+    const group = createSortable({id: 'group-a', index: 0});
+    item.type = 'item';
+    group.type = 'group';
+    group.accept = 'item';
+
+    expect(group.droppable.accepts(item.draggable)).toBe(false);
+  });
+
+  it('accepts an item draggable on another group container', () => {
+    const item = createSortable({id: 'item', index: 0, group: 'group-a'});
+    const group = createSortable({id: 'group-b', index: 1});
+    item.type = 'item';
+    group.type = 'group';
+    group.accept = 'item';
+
+    expect(group.droppable.accepts(item.draggable)).toBe(true);
+  });
+
+  it('accepts another sortable draggable with a matching type', () => {
+    const source = createSortable({id: 'source', index: 0});
+    const target = createSortable({id: 'target', index: 1});
+    source.type = 'item';
+    target.accept = 'item';
+
+    expect(target.droppable.accepts(source.draggable)).toBe(true);
+  });
+
+  it('preserves base accept checks for plain draggables', () => {
+    const draggable = createDraggable('d1');
+    const sortable = createSortable({id: 's1', index: 0});
+    draggable.type = 'item';
+    sortable.accept = 'item';
+
+    expect(sortable.droppable.accepts(draggable)).toBe(true);
   });
 });

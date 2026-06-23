@@ -13,9 +13,15 @@ export default defineConfig((options) => ({
   format: ['esm', 'cjs'],
   sourcemap: true,
   treeshake: !options.watch,
-  esbuildPlugins: [solidPlugin()],
+  esbuildPlugins: [
+    solidPlugin({
+      solid: {
+        moduleName: '@solidjs/web',
+      },
+    }),
+  ],
   esbuildOptions(esbuildOptions) {
     esbuildOptions.jsx = 'preserve';
-    esbuildOptions.jsxImportSource = 'solid-js';
+    esbuildOptions.jsxImportSource = '@solidjs/web';
   },
 }));

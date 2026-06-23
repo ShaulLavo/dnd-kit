@@ -6,6 +6,8 @@ import {createEffect, createSignal} from 'solid-js';
 import {useDeepSignal} from '../../hooks/useDeepSignal.ts';
 import {useInstance} from '../hooks/useInstance.ts';
 
+let placeholderId = 0;
+
 export interface UseDraggableInput<T extends Data = Data>
   extends Omit<DraggableInput<T>, 'handle' | 'element'> {
   handle?: Element;
@@ -19,39 +21,44 @@ export function useDraggable<T extends Data = Data>(
     (manager) =>
       new Draggable(
         {
-          ...input,
+          id: createPlaceholderId(),
           register: false,
-          element: input.element,
-          handle: input.handle,
         },
         manager
       )
   );
   const trackedDraggable = useDeepSignal(() => draggable);
 
-  const [element, setElement] = createSignal<Element | undefined>(
-    input.element
-  );
-  const [handle, setHandle] = createSignal<Element | undefined>(input.handle);
+  const [element, setElement] = createSignal<Element | undefined>();
+  const [handle, setHandle] = createSignal<Element | undefined>();
 
-  createEffect(() => {
-    const el = element();
-    if (el) draggable.element = el;
+  createEffect(
+    () => ({
+      alignment: input.alignment,
+      data: input.data,
+      disabled: input.disabled ?? false,
+      element: element() ?? input.element,
+      handle: handle() ?? input.handle,
+      id: input.id,
+      modifiers: input.modifiers,
+      plugins: input.plugins,
+      sensors: input.sensors,
+    }),
+    (options) => {
+      draggable.element = options.element;
+      draggable.handle = options.handle;
+      draggable.id = options.id;
+      draggable.disabled = options.disabled;
+      draggable.alignment = options.alignment;
+      draggable.plugins = options.plugins;
+      draggable.modifiers = options.modifiers;
+      draggable.sensors = options.sensors;
 
-    const h = handle();
-    if (h) draggable.handle = h;
-
-    draggable.id = input.id;
-    draggable.disabled = input.disabled ?? false;
-    draggable.alignment = input.alignment;
-    draggable.plugins = input.plugins;
-    draggable.modifiers = input.modifiers;
-    draggable.sensors = input.sensors;
-
-    if (input.data) {
-      draggable.data = input.data;
+      if (options.data) {
+        draggable.data = options.data;
+      }
     }
-  });
+  );
 
   return {
     get draggable() {
@@ -63,4 +70,10 @@ export function useDraggable<T extends Data = Data>(
     ref: setElement,
     handleRef: setHandle,
   };
+}
+
+function createPlaceholderId() {
+  placeholderId += 1;
+
+  return `__dnd-kit-solid-draggable-${placeholderId}`;
 }
