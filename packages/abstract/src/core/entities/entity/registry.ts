@@ -51,7 +51,7 @@ export class EntityRegistry<T extends Entity> {
   public register = (key: UniqueIdentifier, value: T) => {
     const current = this.map.peek();
     const currentValue = current.get(key);
-    const unregister = () => this.unregister(key, value);
+    const unregister = () => this.unregister(value.id, value);
 
     if (currentValue === value) return unregister;
 
@@ -96,14 +96,13 @@ export class EntityRegistry<T extends Entity> {
       return;
     }
 
-    const cleanup = this.cleanupFunctions.get(value);
-    cleanup?.();
-    this.cleanupFunctions.delete(value);
-
     const updatedMap = new Map(current);
     updatedMap.delete(key);
-
     this.map.value = updatedMap;
+
+    const cleanup = this.cleanupFunctions.get(value);
+    this.cleanupFunctions.delete(value);
+    cleanup?.();
   };
 
   /**

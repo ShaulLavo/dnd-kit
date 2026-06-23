@@ -7,7 +7,7 @@ import type {
 } from '@dnd-kit/abstract';
 import type {DragDropManager, Draggable, Droppable} from '@dnd-kit/dom';
 import {isSortable} from '@dnd-kit/dom/sortable';
-import {move} from '@dnd-kit/helpers';
+import {arrayMove, move} from '@dnd-kit/helpers';
 
 export type SortableStoreItem =
   | UniqueIdentifier
@@ -438,6 +438,7 @@ function applyQueuedMove<
     applyDefaultMove(input, nextItems);
   }
 
+  input.flush?.();
   onMove({items: nextItems, change});
 }
 
@@ -455,7 +456,7 @@ function applyQueuedGroupMove<
     change: SortableStoreGroupChange<TGroup> | undefined;
   }) => void
 ) {
-  const nextGroups = move(currentGroups, entry.event) as TGroup[];
+  const nextGroups = moveGroups(currentGroups, entry.event);
 
   if (nextGroups === currentGroups) return;
 
@@ -473,7 +474,24 @@ function applyQueuedGroupMove<
     applyDefaultGroupMove(input, nextGroups);
   }
 
+  input.flush?.();
   onMove({groups: nextGroups, change});
+}
+
+function moveGroups<TGroup extends UniqueIdentifier>(
+  currentGroups: TGroup[],
+  event: SortableStoreDragOverEvent
+) {
+  const {source, target, canceled} = event.operation;
+
+  if (!source || !target || canceled) return currentGroups;
+
+  const sourceIndex = currentGroups.indexOf(source.id as TGroup);
+  const targetIndex = currentGroups.indexOf(target.id as TGroup);
+
+  if (sourceIndex < 0 || targetIndex < 0) return currentGroups;
+
+  return arrayMove(currentGroups, sourceIndex, targetIndex);
 }
 
 function applyDefaultMove<
